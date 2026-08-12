@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlertaPy — Alertas de salud comunitaria para Paraguay</title>
+<meta name="description" content="AlertaPy cruza datos de clima, calidad del aire y dengue para avisar a la población vulnerable antes de que el riesgo la alcance, y le da a los municipios un dashboard de riesgo en tiempo real.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌡️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#0B4F6C;
+    --primary-dark:#07344A;
+    --secondary:#40C9A2;
+    --accent:#FF6B35;
+    --bg:#F7FAFA;
+    --card:#FFFFFF;
+    --card-tint:#EFF6F5;
+    --text:#17303A;
+    --muted:#5B7480;
+    --border:rgba(11,79,108,0.12);
+    --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.55;}
+  h1,h2,h3,.brand{font-family:'Sora',sans-serif;}
+  a{color:inherit;}
+  img{max-width:100%;display:block;}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 1.5rem;}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.85rem 1.6rem;border-radius:999px;font-weight:600;font-size:.95rem;text-decoration:none;border:2px solid transparent;cursor:pointer;transition:transform .15s ease, box-shadow .15s ease, background .15s ease;}
+  .btn:hover{transform:translateY(-2px);}
+  .btn-accent{background:var(--accent);color:#fff;box-shadow:0 8px 20px rgba(255,107,53,0.28);}
+  .btn-accent:hover{box-shadow:0 10px 26px rgba(255,107,53,0.4);}
+  .btn-outline{background:transparent;border-color:rgba(255,255,255,0.5);color:#fff;}
+  .btn-outline:hover{background:rgba(255,255,255,0.1);}
+  .btn-primary{background:var(--primary);color:#fff;}
+  section{padding:5rem 0;}
+  .eyebrow{color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.78rem;margin-bottom:.6rem;display:block;}
+  .section-title{font-size:2.1rem;font-weight:800;color:var(--primary-dark);margin-bottom:.75rem;}
+  .section-sub{color:var(--muted);font-size:1.05rem;max-width:640px;}
+  .badge{display:inline-block;background:var(--card-tint);color:var(--primary);border-radius:999px;padding:.3rem .8rem;font-size:.78rem;font-weight:600;}
+
+  /* ---------- Nav ---------- */
+  header{position:sticky;top:0;z-index:50;background:rgba(247,250,250,0.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);}
+  nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;max-width:1160px;margin:0 auto;}
+  .brand{font-weight:800;font-size:1.25rem;color:var(--primary-dark);display:flex;align-items:center;gap:.4rem;text-decoration:none;}
+  .brand .dot{color:var(--secondary);}
+  .nav-links{display:flex;gap:1.6rem;list-style:none;}
+  .nav-links a{font-weight:600;font-size:.92rem;color:var(--text);text-decoration:none;}
+  .nav-links a:hover{color:var(--primary);}
+  .nav-cta{display:flex;gap:.7rem;align-items:center;}
+  .nav-cta .btn{padding:.6rem 1.2rem;font-size:.88rem;}
+  @media (max-width:860px){
+    .nav-links{display:none;}
+  }
+
+  /* ---------- Hero ---------- */
+  .hero{background:radial-gradient(circle at 80% 0%, #0e6488 0%, var(--primary-dark) 55%);color:#fff;padding:5.5rem 0 6rem;position:relative;overflow:hidden;}
+  .hero::after{content:"";position:absolute;right:-120px;bottom:-160px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(64,201,162,0.35),transparent 70%);}
+  .hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:3rem;align-items:center;position:relative;z-index:1;}
+  .hero h1{font-size:2.7rem;font-weight:800;line-height:1.15;margin-bottom:1.1rem;}
+  .hero h1 span{color:var(--secondary);}
+  .hero p{color:#CFE4E9;font-size:1.1rem;max-width:520px;margin-bottom:2rem;}
+  .hero-ctas{display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1.6rem;}
+  .hero-trust{font-size:.85rem;color:#9FC3CC;}
+  .hero-card{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:var(--radius);padding:1.6rem;backdrop-filter:blur(6px);}
+  .hero-card .msg{background:#fff;color:var(--text);border-radius:12px;padding:1rem 1.1rem;font-size:.9rem;margin-bottom:.8rem;box-shadow:0 10px 24px rgba(0,0,0,0.15);}
+  .hero-card .msg b{color:var(--primary);}
+  .hero-card .msg.alt{background:var(--secondary);color:var(--primary-dark);}
+  .hero-tag{font-size:.72rem;color:#9FC3CC;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem;}
+  @media (max-width:860px){ .hero-grid{grid-template-columns:1fr;} .hero{padding:3.5rem 0 4rem;} .hero h1{font-size:2.1rem;} }
+
+  /* ---------- Problema cards ---------- */
+  .cards-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:2.5rem;}
+  .stat-card{background:var(--card);border-radius:var(--radius);padding:2rem 1.6rem;box-shadow:0 10px 30px rgba(11,79,108,0.07);text-align:center;}
+  .stat-card .icon{width:56px;height:56px;border-radius:50%;background:var(--card-tint);display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin:0 auto 1rem;}
+  .stat-card .big{font-size:2.2rem;font-weight:800;color:var(--accent);font-family:'Sora',sans-serif;margin-bottom:.4rem;}
+  .stat-card .label{font-weight:700;font-size:.95rem;margin-bottom:.4rem;}
+  .stat-card .sub{color:var(--muted);font-size:.88rem;}
+  @media (max-width:860px){ .cards-3{grid-template-columns:1fr;} }
+
+  /* ---------- Solución rows ---------- */
+  .solution{display:grid;grid-template-columns:repeat(3,1fr);gap:1.6rem;margin-top:2.5rem;}
+  .sol-card{background:var(--card);border-radius:var(--radius);padding:1.8rem;box-shadow:0 10px 30px rgba(11,79,108,0.06);}
+  .sol-card .icon{width:48px;height:48px;border-radius:12px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin-bottom:1rem;}
+  .sol-card h3{font-size:1.1rem;margin-bottom:.5rem;}
+  .sol-card p{color:var(--muted);font-size:.92rem;}
+  @media (max-width:860px){ .solution{grid-template-columns:1fr;} }
+
+  /* ---------- Steps ---------- */
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:1.2rem;margin-top:2.5rem;counter-reset:step;}
+  .step{background:var(--card);border-radius:var(--radius);padding:1.6rem 1.3rem;box-shadow:0 10px 30px rgba(11,79,108,0.06);position:relative;}
+  .step .num{width:34px;height:34px;border-radius:50%;background:var(--secondary);color:var(--primary-dark);font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:.9rem;}
+  .step h3{font-size:1rem;margin-bottom:.4rem;}
+  .step p{color:var(--muted);font-size:.87rem;}
+  @media (max-width:900px){ .steps{grid-template-columns:1fr 1fr;} }
+  @media (max-width:560px){ .steps{grid-template-columns:1fr;} }
+
+  /* ---------- Por qué Paraguay ---------- */
+  .why{background:var(--card);}
+  .why-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin-top:2.5rem;}
+  .why-item{display:flex;gap:1rem;}
+  .why-item .icon{flex:0 0 auto;width:52px;height:52px;border-radius:14px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.35rem;}
+  .why-item h3{font-size:1.02rem;margin-bottom:.35rem;}
+  .why-item p{color:var(--muted);font-size:.9rem;}
+  @media (max-width:760px){ .why-grid{grid-template-columns:1fr;} }
+
+  /* ---------- Producto dos caras ---------- */
+  .product-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin-top:2.5rem;}
+  .product-card{border-radius:var(--radius);padding:2rem;}
+  .product-card.free{background:var(--card);box-shadow:0 10px 30px rgba(11,79,108,0.07);}
+  .product-card.paid{background:var(--primary-dark);color:#fff;}
+  .product-card h3{font-size:1.3rem;margin-bottom:1.2rem;display:flex;align-items:center;gap:.6rem;}
+  .product-card ul{list-style:none;display:flex;flex-direction:column;gap:.7rem;}
+  .product-card li{padding-left:1.5rem;position:relative;font-size:.94rem;}
+  .product-card.free li{color:var(--text);}
+  .product-card.paid li{color:#E4EEF0;}
+  .product-card li::before{content:"✓";position:absolute;left:0;color:var(--secondary);font-weight:700;}
+  @media (max-width:860px){ .product-grid{grid-template-columns:1fr;} }
+
+  /* ---------- Roadmap ---------- */
+  .roadmap{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem;margin-top:2.5rem;}
+  .phase{background:var(--card-tint);border-radius:var(--radius);padding:1.8rem;}
+  .phase .tag{color:var(--accent);font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;}
+  .phase h3{font-size:1.2rem;margin:.5rem 0 .7rem;color:var(--primary-dark);}
+  .phase p{color:var(--muted);font-size:.9rem;}
+  @media (max-width:860px){ .roadmap{grid-template-columns:1fr;} }
+
+  /* ---------- CTA / Form ---------- */
+  .cta-section{background:linear-gradient(135deg,var(--primary) 0%, var(--primary-dark) 100%);color:#fff;border-radius:24px;padding:3rem;margin:0 1.5rem;max-width:1160px;margin-left:auto;margin-right:auto;}
+  .cta-grid{display:grid;grid-template-columns:1fr 1fr;gap:2.5rem;align-items:center;}
+  .cta-grid h2{font-size:1.9rem;margin-bottom:.8rem;}
+  .cta-grid p{color:#CFE4E9;font-size:.98rem;}
+  form.lead{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:16px;padding:1.6rem;display:flex;flex-direction:column;gap:.9rem;}
+  form.lead label{font-size:.8rem;color:#CFE4E9;font-weight:600;}
+  form.lead input,form.lead select{padding:.75rem .9rem;border-radius:10px;border:1px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.95);font-family:inherit;font-size:.92rem;color:var(--text);}
+  form.lead .row{display:flex;flex-direction:column;gap:.35rem;}
+  form.lead .success{display:none;background:var(--secondary);color:var(--primary-dark);padding:.9rem 1rem;border-radius:10px;font-size:.88rem;font-weight:600;}
+  @media (max-width:860px){ .cta-grid{grid-template-columns:1fr;} .cta-section{padding:2rem;border-radius:18px;} }
+
+  footer{padding:3rem 0 2.5rem;color:var(--muted);font-size:.85rem;}
+  .footer-grid{display:flex;justify-content:space-between;flex-wrap:wrap;gap:1.5rem;border-top:1px solid var(--border);padding-top:2rem;}
+  .footer-note{max-width:520px;font-size:.8rem;color:#8096A0;}
+  .disclaimer{background:#FFF4EC;border:1px solid rgba(255,107,53,0.25);color:#8a4118;border-radius:12px;padding:.9rem 1.1rem;font-size:.82rem;margin-top:2.5rem;}
+</style>
+</head>
+<body>
+
+<header>
+  <nav>
+    <a href="#" class="brand">🌡️ AlertaPy<span class="dot">.</span></a>
+    <ul class="nav-links">
+      <li><a href="#problema">Problema</a></li>
+      <li><a href="#solucion">Solución</a></li>
+      <li><a href="#como-funciona">Cómo funciona</a></li>
+      <li><a href="#municipios">Para municipios</a></li>
+      <li><a href="#roadmap">Roadmap</a></li>
+    </ul>
+    <div class="nav-cta">
+      <a href="dashboard.html" class="btn btn-primary">Ver demo del dashboard</a>
+    </div>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="badge" style="background:rgba(255,255,255,0.12);color:#fff;">🇵🇾 Hecho para Paraguay</span>
+      <h1 style="margin-top:1rem;">Alertas de salud comunitaria, <span>antes de que el riesgo te alcance</span></h1>
+      <p>AlertaPy cruza datos de clima, calidad del aire y focos de dengue con el perfil de salud de cada persona, y avisa por WhatsApp antes de que el riesgo llegue. Gratis para la gente. Un dashboard de riesgo en tiempo real para el municipio.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-accent" href="registro.html">🌡️ Vivo en San Lorenzo, sumame al piloto</a>
+        <a class="btn btn-outline" href="dashboard.html">Ver demo del dashboard →</a>
+      </div>
+      <div class="hero-trust">Pensado junto a la realidad de SENEPA, MSPBS, DINAC y los municipios del Área Metropolitana de Asunción. ¿Sos de un municipio o de SENEPA/MSPBS? <a href="#unite" style="color:#fff;text-decoration:underline;">Contactanos acá.</a></div>
+    </div>
+    <div class="hero-card">
+      <div class="hero-tag">Vista previa · Notificación al ciudadano</div>
+      <div class="msg"><b>AlertaPy:</b> Sos asmático y mañana la calidad del aire empeora en tu barrio entre 14 y 18hs. Evitá salir en ese horario si podés.</div>
+      <div class="msg alt"><b>AlertaPy:</b> Se reportó un foco de dengue a 200m de tu casa. Ya avisamos a SENEPA. Revisá recipientes con agua estancada.</div>
+      <div class="msg"><b>AlertaPy:</b> Mañana la sensación térmica supera los 42°C en San Lorenzo. Hidratate y evitá el sol entre 12 y 16hs.</div>
+    </div>
+  </div>
+</section>
+
+<section id="problema">
+  <div class="wrap">
+    <span class="eyebrow">El problema</span>
+    <h2 class="section-title">Paraguay enfrenta riesgos recurrentes con poca capacidad de anticipación</h2>
+    <p class="section-sub">Los datos ya existen. Lo que falta es cruzarlos con quién los necesita y avisarle a tiempo.</p>
+    <div class="cards-3">
+      <div class="stat-card">
+        <div class="icon">🦟</div>
+        <div class="big">4</div>
+        <div class="label">epidemias de dengue de gran escala desde 2020</div>
+        <div class="sub">Miles de casos por temporada, picos que colapsan las guardias.</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon">🌡️</div>
+        <div class="big">45°C+</div>
+        <div class="label">sensación térmica en olas de calor</div>
+        <div class="sub">El golpe de calor es la principal urgencia evitable del verano.</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon">🌫️</div>
+        <div class="big">&lt; 5</div>
+        <div class="label">estaciones de calidad de aire monitoreadas activamente</div>
+        <div class="sub">Sin dato local, no hay alerta posible para asmáticos y EPOC.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="solucion" style="background:var(--card);">
+  <div class="wrap">
+    <span class="eyebrow">La solución</span>
+    <h2 class="section-title">Un aviso simple, en el canal que la gente ya usa</h2>
+    <p class="section-sub">Sin apps que nadie instala. Notificaciones personalizadas por perfil de salud, ubicación y urgencia.</p>
+    <div class="solution">
+      <div class="sol-card">
+        <div class="icon">💬</div>
+        <h3>Bot de WhatsApp + app gratuita</h3>
+        <p>Alertas por condición (asma, embarazo, adultos mayores) y ubicación. WhatsApp está bonificado por las telcos paraguayas, así que no consume datos del usuario.</p>
+      </div>
+      <div class="sol-card">
+        <div class="icon">📍</div>
+        <h3>Reporte ciudadano de criaderos</h3>
+        <p>Cualquiera puede reportar un foco de dengue con foto y geolocalización. El reporte se valida y se comparte con SENEPA.</p>
+      </div>
+      <div class="sol-card">
+        <div class="icon">📊</div>
+        <h3>Dashboard para el municipio</h3>
+        <p>Mapa de riesgo en tiempo real por barrio, para anticipar fumigación y demanda de salud antes de que colapse.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="como-funciona">
+  <div class="wrap">
+    <span class="eyebrow">Cómo funciona</span>
+    <h2 class="section-title">De datos públicos a una alerta accionable</h2>
+    <div class="steps">
+      <div class="step"><div class="num">1</div><h3>Fuentes de datos</h3><p>DINAC (clima), SENEPA/MSPBS (dengue) y calidad de aire.</p></div>
+      <div class="step"><div class="num">2</div><h3>Motor de riesgo</h3><p>Cruce con el perfil de salud y la geolocalización del usuario.</p></div>
+      <div class="step"><div class="num">3</div><h3>Alerta personalizada</h3><p>Push, WhatsApp o SMS, según a quién y qué tan urgente.</p></div>
+      <div class="step"><div class="num">4</div><h3>Dashboard municipal</h3><p>Riesgo agregado por barrio para decisiones públicas.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="por-que" class="why">
+  <div class="wrap">
+    <span class="eyebrow">Por qué Paraguay, por qué ahora</span>
+    <h2 class="section-title">El contexto ya está dado</h2>
+    <div class="why-grid">
+      <div class="why-item">
+        <div class="icon">💬</div>
+        <div><h3>WhatsApp con datos bonificados</h3><p>Tigo, Personal y Claro liberan tráfico de WhatsApp: notificar por ese canal no le cuesta datos móviles al usuario, ni siquiera sin plan activo.</p></div>
+      </div>
+      <div class="why-item">
+        <div class="icon">🦟</div>
+        <div><h3>El dengue es prioridad política</h3><p>Epidemias recurrentes (2020, 2023, 2024) generan presión real sobre SENEPA y los municipios para invertir en prevención temprana.</p></div>
+      </div>
+      <div class="why-item">
+        <div class="icon">🌫️</div>
+        <div><h3>Brecha de monitoreo ambiental</h3><p>Pocas estaciones propias de calidad de aire: hay espacio para ser la referencia de dato accionable, no solo dato crudo.</p></div>
+      </div>
+      <div class="why-item">
+        <div class="icon">🤝</div>
+        <div><h3>Aliados naturales ya existen</h3><p>MSPBS y SENEPA necesitan un canal de alerta directa al ciudadano que hoy no tienen construido.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="municipios">
+  <div class="wrap">
+    <span class="eyebrow">Un producto, dos caras</span>
+    <h2 class="section-title">Gratis para la gente. SaaS para el municipio.</h2>
+    <div class="product-grid">
+      <div class="product-card free">
+        <h3>👥 Ciudadano — Gratis</h3>
+        <ul>
+          <li>App + bot de WhatsApp sin costo</li>
+          <li>Alertas por perfil: asma, embarazo, adultos mayores</li>
+          <li>Reporte de criaderos de dengue con foto y ubicación</li>
+          <li>Recomendaciones simples y accionables</li>
+        </ul>
+      </div>
+      <div class="product-card paid">
+        <h3>🏛️ Municipio / MSPBS — SaaS pago</h3>
+        <ul>
+          <li>Mapa de riesgo en tiempo real por barrio</li>
+          <li>Historial y series para planificar fumigación</li>
+          <li>Emisión de alertas oficiales verificadas</li>
+          <li>Reportes exportables para rendición de cuentas</li>
+        </ul>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:2.2rem;">
+      <a href="dashboard.html" class="btn btn-primary">Ver demo del dashboard municipal →</a>
+    </div>
+  </div>
+</section>
+
+<section id="roadmap" style="background:var(--card);">
+  <div class="wrap">
+    <span class="eyebrow">Roadmap</span>
+    <h2 class="section-title">Cómo lo vamos a construir</h2>
+    <div class="roadmap">
+      <div class="phase">
+        <div class="tag">Meses 0-6</div>
+        <h3>🚀 Piloto</h3>
+        <p>1 municipio del Área Metropolitana, riesgo de calor + asma, bot de WhatsApp, sin cobro.</p>
+      </div>
+      <div class="phase">
+        <div class="tag">Meses 6-18</div>
+        <h3>📈 Expansión</h3>
+        <p>Sumar dengue y calidad de aire, lanzar el dashboard, primer contrato pago con un municipio.</p>
+      </div>
+      <div class="phase">
+        <div class="tag">Meses 18-36</div>
+        <h3>🏁 Escala regional</h3>
+        <p>Ciudad del Este y Encarnación, convenio con SENEPA/MSPBS, 18+ municipios pagantes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="unite">
+  <div class="cta-section">
+    <div class="cta-grid">
+      <div>
+        <h2>¿Sos de un municipio, de SENEPA/MSPBS o querés sumarte al piloto?</h2>
+        <p>Dejanos tus datos y te contactamos para mostrarte el dashboard en profundidad o sumarte como usuario piloto. Sin compromiso.</p>
+      </div>
+      <form class="lead" id="lead-form">
+        <div class="row">
+          <label for="name">Nombre</label>
+          <input id="name" name="name" type="text" required placeholder="Tu nombre">
+        </div>
+        <div class="row">
+          <label for="org">Municipio / organización (opcional)</label>
+          <input id="org" name="org" type="text" placeholder="Ej: Municipalidad de San Lorenzo">
+        </div>
+        <div class="row">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" required placeholder="tu@email.com">
+        </div>
+        <div class="row">
+          <label for="role">Te interesa como...</label>
+          <select id="role" name="role">
+            <option>Municipio / gobierno</option>
+            <option>SENEPA / MSPBS</option>
+            <option>Ciudadano — quiero ser piloto</option>
+            <option>Inversor / financiamiento</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-accent" style="justify-content:center;">Quiero que me contacten</button>
+        <div class="success" id="lead-success">¡Gracias! Se abrió tu cliente de email con el mensaje listo para enviar a normanoddone@gmail.com.</div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="disclaimer">
+      ⚠️ Este sitio presenta una propuesta de producto en etapa de validación. Las cifras de impacto y proyecciones mencionadas son estimaciones de referencia, no datos oficiales de SENEPA, MSPBS ni DINAC.
+    </div>
+    <div class="footer-grid" style="margin-top:1.5rem;">
+      <div class="footer-note">
+        <strong style="color:var(--primary-dark);">AlertaPy</strong> — Alertas de salud comunitaria basadas en clima y dengue, para Paraguay.
+      </div>
+      <div class="footer-note">
+        Contacto: <a href="mailto:normanoddone@gmail.com" style="color:var(--primary);font-weight:600;">normanoddone@gmail.com</a><br>
+        <a href="dashboard.html" style="color:var(--primary);font-weight:600;">Ver demo del dashboard →</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const form = document.getElementById('lead-form');
+  const success = document.getElementById('lead-success');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    const name = document.getElementById('name').value.trim();
+    const org = document.getElementById('org').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const role = document.getElementById('role').value;
+
+    if (role === 'Ciudadano — quiero ser piloto') {
+      window.location.href = 'registro.html';
+      return;
+    }
+
+    const subject = encodeURIComponent('AlertaPy — Interés: ' + role);
+    const body = encodeURIComponent(
+      'Nombre: ' + name + '\n' +
+      'Municipio/organización: ' + (org || '-') + '\n' +
+      'Email de contacto: ' + email + '\n' +
+      'Interés: ' + role + '\n'
+    );
+    window.location.href = 'mailto:normanoddone@gmail.com?subject=' + subject + '&body=' + body;
+    success.style.display = 'block';
+  });
+</script>
+
+</body>
+</html>
