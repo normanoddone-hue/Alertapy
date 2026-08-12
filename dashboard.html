@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard municipal (demo) — AlertaPy</title>
+<meta name="description" content="Demo del dashboard de riesgo sanitario en tiempo real para municipios, con datos simulados.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌡️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" crossorigin></script>
+<style>
+  :root{
+    --primary:#0B4F6C;
+    --primary-dark:#07344A;
+    --secondary:#40C9A2;
+    --accent:#FF6B35;
+    --risk-green:#2FA860;
+    --risk-yellow:#E8B93B;
+    --risk-red:#E14B4B;
+    --bg:#F2F6F6;
+    --card:#FFFFFF;
+    --card-tint:#EFF6F5;
+    --text:#17303A;
+    --muted:#5B7480;
+    --border:#E1EAEB;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);}
+  h1,h2,h3,.brand{font-family:'Sora',sans-serif;}
+
+  .topbar{background:var(--primary-dark);color:#fff;padding:.9rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem;}
+  .brand{font-weight:800;font-size:1.15rem;text-decoration:none;color:#fff;display:flex;align-items:center;gap:.4rem;}
+  .brand .dot{color:var(--secondary);}
+  .topbar .meta{font-size:.8rem;color:#B9D4DA;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+  .back-link{color:#CFE4E9;text-decoration:none;font-size:.85rem;font-weight:600;}
+  .back-link:hover{color:#fff;}
+  .demo-pill{background:var(--accent);color:#fff;font-size:.72rem;font-weight:700;padding:.25rem .65rem;border-radius:999px;text-transform:uppercase;letter-spacing:.04em;}
+
+  .layout{max-width:1400px;margin:0 auto;padding:1.5rem;display:flex;flex-direction:column;gap:1.3rem;}
+
+  .disclaimer-bar{background:#FFF4EC;border:1px solid rgba(255,107,53,0.3);color:#8a4118;border-radius:12px;padding:.7rem 1rem;font-size:.82rem;}
+
+  .filters{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:.9rem 1.1rem;}
+  .filters .label{font-size:.82rem;font-weight:700;color:var(--muted);margin-right:.3rem;}
+  .filter-btn{border:1px solid var(--border);background:#fff;color:var(--text);padding:.5rem 1rem;border-radius:999px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .15s ease;}
+  .filter-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+  .filter-btn:hover{border-color:var(--primary);}
+  .select-city{margin-left:auto;padding:.55rem .9rem;border-radius:10px;border:1px solid var(--border);font-family:inherit;font-size:.85rem;font-weight:600;color:var(--text);background:#fff;}
+
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.3rem;}
+  .stat .n{font-size:1.7rem;font-weight:800;font-family:'Sora',sans-serif;color:var(--primary-dark);}
+  .stat .l{font-size:.8rem;color:var(--muted);font-weight:600;margin-top:.2rem;}
+  .stat.alert .n{color:var(--risk-red);}
+
+  .main-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:1.3rem;align-items:start;}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.3rem;}
+  .panel h2{font-size:1.05rem;margin-bottom:.2rem;}
+  .panel .sub{font-size:.8rem;color:var(--muted);margin-bottom:1rem;}
+
+  #map{height:460px;border-radius:12px;z-index:1;}
+  .legend{display:flex;gap:1.2rem;margin-top:.9rem;font-size:.8rem;color:var(--muted);flex-wrap:wrap;}
+  .legend span{display:inline-flex;align-items:center;gap:.4rem;}
+  .dot-legend{width:10px;height:10px;border-radius:50%;display:inline-block;}
+
+  table{width:100%;border-collapse:collapse;font-size:.85rem;}
+  th{text-align:left;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;padding:.5rem .4rem;border-bottom:1px solid var(--border);}
+  td{padding:.65rem .4rem;border-bottom:1px solid var(--border);}
+  tr:last-child td{border-bottom:none;}
+  .risk-badge{display:inline-block;padding:.2rem .6rem;border-radius:999px;font-size:.72rem;font-weight:700;color:#fff;}
+  .risk-badge.verde{background:var(--risk-green);}
+  .risk-badge.amarillo{background:var(--risk-yellow);color:#4a3a00;}
+  .risk-badge.rojo{background:var(--risk-red);}
+
+  .chart-wrap{height:230px;margin-top:.5rem;}
+
+  .alerts-list{display:flex;flex-direction:column;gap:.7rem;margin-top:.5rem;}
+  .alert-item{display:flex;gap:.7rem;align-items:flex-start;padding:.7rem;border-radius:10px;background:var(--card-tint);}
+  .alert-item .ic{font-size:1.1rem;}
+  .alert-item .txt{font-size:.83rem;}
+  .alert-item .txt b{display:block;font-size:.85rem;margin-bottom:.1rem;}
+  .alert-item .txt small{color:var(--muted);}
+
+  @media (max-width:1000px){
+    .main-grid{grid-template-columns:1fr;}
+    .stat-row{grid-template-columns:1fr 1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html" class="brand">🌡️ AlertaPy<span class="dot">.</span> <span style="font-weight:500;font-size:.85rem;color:#CFE4E9;">/ Dashboard municipal</span></a>
+  <div class="meta">
+    <span class="demo-pill">Demo — datos simulados</span>
+    <a href="index.html" class="back-link">← Volver al sitio</a>
+  </div>
+</div>
+
+<div class="layout">
+
+  <div class="disclaimer-bar">
+    ⚠️ Esta vista usa <strong>datos simulados</strong> con fines de demostración comercial. No representa reportes reales de SENEPA, MSPBS ni DINAC.
+  </div>
+
+  <div class="filters">
+    <span class="label">Ver riesgo de:</span>
+    <button class="filter-btn active" data-risk="general">General</button>
+    <button class="filter-btn" data-risk="dengue">🦟 Dengue</button>
+    <button class="filter-btn" data-risk="calor">🌡️ Calor</button>
+    <button class="filter-btn" data-risk="aire">🌫️ Calidad de aire</button>
+    <select class="select-city" id="city-select">
+      <option value="todos">Área Metropolitana de Asunción</option>
+      <option value="cde">Ciudad del Este</option>
+      <option value="enc">Encarnación</option>
+    </select>
+  </div>
+
+  <div class="stat-row" id="stat-row">
+    <div class="stat"><div class="n" id="stat-barrios">--</div><div class="l">Barrios monitoreados</div></div>
+    <div class="stat alert"><div class="n" id="stat-rojo">--</div><div class="l">Barrios en riesgo alto</div></div>
+    <div class="stat"><div class="n" id="stat-usuarios">--</div><div class="l">Usuarios ciudadanos activos</div></div>
+    <div class="stat"><div class="n" id="stat-reportes">--</div><div class="l">Reportes de foco (7 días)</div></div>
+  </div>
+
+  <div class="main-grid">
+    <div class="panel">
+      <h2>Mapa de riesgo por barrio</h2>
+      <div class="sub" id="map-sub">Riesgo general — Área Metropolitana de Asunción</div>
+      <div id="map"></div>
+      <div class="legend">
+        <span><i class="dot-legend" style="background:var(--risk-green);"></i> Riesgo bajo</span>
+        <span><i class="dot-legend" style="background:var(--risk-yellow);"></i> Riesgo medio</span>
+        <span><i class="dot-legend" style="background:var(--risk-red);"></i> Riesgo alto</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Alertas activas</h2>
+      <div class="sub">Últimas notificaciones enviadas a la población</div>
+      <div class="alerts-list" id="alerts-list"></div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <div class="panel">
+      <h2>Ranking de barrios por riesgo</h2>
+      <div class="sub">Ordenado de mayor a menor riesgo combinado</div>
+      <table>
+        <thead>
+          <tr><th>Barrio</th><th>Dengue</th><th>Calor</th><th>Aire</th><th>Nivel</th></tr>
+        </thead>
+        <tbody id="risk-table"></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Tendencia semanal</h2>
+      <div class="sub" id="chart-sub">Índice de riesgo general — últimos 14 días</div>
+      <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ---------------------------------------------------------------
+   Datos SIMULADOS para la demo. Coordenadas de barrios/ciudades son
+   aproximadas y se usan solo para ubicar los marcadores en el mapa.
+--------------------------------------------------------------- */
+const BARRIOS = [
+  { nombre: "San Lorenzo (centro)", lat: -25.3400, lng: -57.5088, dengue: 78, calor: 55, aire: 40 },
+  { nombre: "Luque", lat: -25.2699, lng: -57.4873, dengue: 62, calor: 60, aire: 35 },
+  { nombre: "Fernando de la Mora", lat: -25.3199, lng: -57.5678, dengue: 45, calor: 50, aire: 58 },
+  { nombre: "Lambaré", lat: -25.3467, lng: -57.6062, dengue: 38, calor: 48, aire: 44 },
+  { nombre: "Ñemby", lat: -25.3958, lng: -57.5347, dengue: 55, calor: 52, aire: 30 },
+  { nombre: "Capiatá", lat: -25.3556, lng: -57.4453, dengue: 70, calor: 58, aire: 33 },
+  { nombre: "Asunción (Centro)", lat: -25.2968, lng: -57.6362, dengue: 40, calor: 46, aire: 62 },
+  { nombre: "Asunción (Norte)", lat: -25.2637, lng: -57.5759, dengue: 33, calor: 44, aire: 50 },
+];
+
+const BARRIOS_CDE = [
+  { nombre: "Ciudad del Este (centro)", lat: -25.5163, lng: -54.6118, dengue: 66, calor: 57, aire: 38 },
+  { nombre: "Ciudad del Este (Km 7)", lat: -25.4850, lng: -54.8420, dengue: 50, calor: 53, aire: 28 },
+];
+
+const BARRIOS_ENC = [
+  { nombre: "Encarnación (centro)", lat: -27.3306, lng: -55.8664, dengue: 58, calor: 50, aire: 25 },
+  { nombre: "Encarnación (Cambyretá)", lat: -27.2969, lng: -55.8281, dengue: 41, calor: 47, aire: 22 },
+];
+
+const CITY_DATA = { todos: BARRIOS, cde: BARRIOS_CDE, enc: BARRIOS_ENC };
+const CITY_CENTER = {
+  todos: [-25.32, -57.55],
+  cde: [-25.50, -54.71],
+  enc: [-27.31, -55.85],
+};
+const CITY_ZOOM = { todos: 11, cde: 12, enc: 12 };
+const CITY_LABEL = {
+  todos: "Área Metropolitana de Asunción",
+  cde: "Ciudad del Este",
+  enc: "Encarnación",
+};
+
+const RISK_LABEL = { general: "Riesgo general", dengue: "Dengue", calor: "Calor extremo", aire: "Calidad de aire" };
+
+let currentRisk = "general";
+let currentCity = "todos";
+let map, markersLayer;
+
+function riskValue(b, risk){
+  if(risk === "general") return Math.round((b.dengue + b.calor + b.aire) / 3);
+  return b[risk];
+}
+function riskLevel(v){
+  if(v >= 65) return "rojo";
+  if(v >= 40) return "amarillo";
+  return "verde";
+}
+function riskColor(level){
+  return level === "rojo" ? "#E14B4B" : level === "amarillo" ? "#E8B93B" : "#2FA860";
+}
+
+function initMap(){
+  if (typeof L === 'undefined') {
+    document.getElementById('map').innerHTML =
+      '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.85rem;text-align:center;padding:1rem;">No se pudo cargar el mapa (Leaflet).<br>El resto del dashboard funciona igual.</div>';
+    render();
+    return;
+  }
+  map = L.map('map', { scrollWheelZoom: false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 18,
+  }).addTo(map);
+  markersLayer = L.layerGroup().addTo(map);
+  render();
+}
+
+function render(){
+  const data = CITY_DATA[currentCity];
+  const center = CITY_CENTER[currentCity];
+  const zoom = CITY_ZOOM[currentCity];
+  if (map) map.setView(center, zoom);
+  if (markersLayer) markersLayer.clearLayers();
+
+  const rows = [];
+  let rojoCount = 0;
+
+  data.forEach(b => {
+    const v = riskValue(b, currentRisk);
+    const level = riskLevel(v);
+    if(level === "rojo") rojoCount++;
+    const color = riskColor(level);
+    const radius = 10 + v / 6;
+
+    if (markersLayer) {
+      L.circleMarker([b.lat, b.lng], {
+        radius, color, fillColor: color, fillOpacity: 0.55, weight: 2,
+      }).bindPopup(
+        `<strong>${b.nombre}</strong><br>Dengue: ${b.dengue} · Calor: ${b.calor} · Aire: ${b.aire}<br><em>${RISK_LABEL[currentRisk]}: ${v}/100</em>`
+      ).addTo(markersLayer);
+    }
+
+    rows.push({ ...b, v, level });
+  });
+
+  rows.sort((a, b) => b.v - a.v);
+  document.getElementById('risk-table').innerHTML = rows.map(b => `
+    <tr>
+      <td>${b.nombre}</td>
+      <td>${b.dengue}</td>
+      <td>${b.calor}</td>
+      <td>${b.aire}</td>
+      <td><span class="risk-badge ${b.level}">${b.level.toUpperCase()}</span></td>
+    </tr>
+  `).join('');
+
+  document.getElementById('stat-barrios').textContent = data.length;
+  document.getElementById('stat-rojo').textContent = rojoCount;
+  document.getElementById('stat-usuarios').textContent = currentCity === 'todos' ? '14.320' : currentCity === 'cde' ? '3.180' : '2.640';
+  document.getElementById('stat-reportes').textContent = currentCity === 'todos' ? '47' : currentCity === 'cde' ? '12' : '9';
+  document.getElementById('map-sub').textContent = `${RISK_LABEL[currentRisk]} — ${CITY_LABEL[currentCity]}`;
+  document.getElementById('chart-sub').textContent = `Índice de ${RISK_LABEL[currentRisk].toLowerCase()} — últimos 14 días — ${CITY_LABEL[currentCity]}`;
+
+  renderAlerts(rows);
+  renderChart();
+}
+
+function renderAlerts(rows){
+  const top = rows.slice(0, 4);
+  const templates = {
+    dengue: (b) => `Se enviaron alertas de foco de dengue a usuarios en <b>${b.nombre}</b>`,
+    calor: (b) => `Alerta de sensación térmica extrema enviada en <b>${b.nombre}</b>`,
+    aire: (b) => `Alerta de calidad de aire enviada a usuarios asmáticos en <b>${b.nombre}</b>`,
+    general: (b) => `Alerta combinada enviada a usuarios vulnerables en <b>${b.nombre}</b>`,
+  };
+  const icons = { dengue: "🦟", calor: "🌡️", aire: "🌫️", general: "🔔" };
+  document.getElementById('alerts-list').innerHTML = top.map((b, i) => `
+    <div class="alert-item">
+      <div class="ic">${icons[currentRisk]}</div>
+      <div class="txt">${templates[currentRisk](b)}<br><small>hace ${(i + 1) * 3}h · ${Math.round(80 + Math.random() * 400)} usuarios notificados</small></div>
+    </div>
+  `).join('');
+}
+
+let chartInstance = null;
+function renderChart(){
+  if (typeof Chart === 'undefined') return;
+  const ctx = document.getElementById('trend-chart').getContext('2d');
+  const days = Array.from({length: 14}, (_, i) => `D-${13 - i}`);
+  const base = CITY_DATA[currentCity].reduce((acc, b) => acc + riskValue(b, currentRisk), 0) / CITY_DATA[currentCity].length;
+  const series = days.map((_, i) => Math.max(10, Math.min(95, Math.round(base + Math.sin(i / 2) * 10 + (Math.random() * 8 - 4)))));
+
+  if(chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: days,
+      datasets: [{
+        label: RISK_LABEL[currentRisk],
+        data: series,
+        borderColor: '#0B4F6C',
+        backgroundColor: 'rgba(64,201,162,0.18)',
+        fill: true,
+        tension: 0.35,
+        pointRadius: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, max: 100, grid: { color: '#E1EAEB' } },
+        x: { grid: { display: false } },
+      },
+    },
+  });
+}
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentRisk = btn.dataset.risk;
+    render();
+  });
+});
+
+document.getElementById('city-select').addEventListener('change', (e) => {
+  currentCity = e.target.value;
+  render();
+});
+
+initMap();
+</script>
+
+</body>
+</html>
